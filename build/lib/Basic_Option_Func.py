@@ -6,7 +6,7 @@ from scipy import stats
 class Params:
     default = {
         'Typeflag': 'c',
-        'Strike': 1,
+        'Stirke': 1,
         'Underlying': 1,
         'T2exp': 1,
         'Sigma': 0.1,
@@ -14,17 +14,17 @@ class Params:
         'Rf': 0, }
 
     def __init__(self, params=default):
-        self.typeflag = params.get('Typeflag')
-        self.strike = params.get('Strike')
-        self.underlying = params.get('Underlying')
-        self.t2exp = params.get('T2exp')
-        self.sigma = params.get('Sigma')
-        self.price = params.get('Price')
-        self.rf = params.get('Rf')
-        try:
+        self.typeflag = params['Typeflag']
+        self.strike = params['Stirke']
+        self.underlying = params['Underlying']
+        self.t2exp = params['T2exp']
+        self.sigma = params['Sigma']
+        self.price = params['Price']
+        self.rf = params['Rf']
+        if self.sigma is not None:
             self.d1 = (np.log(self.underlying / self.strike) + (self.rf + pow(self.sigma, 2) / 2) * self.t2exp) / (self.sigma * np.sqrt(self.t2exp))
             self.d2 = (np.log(self.underlying / self.strike) + (self.rf - pow(self.sigma, 2) / 2) * self.t2exp) / (self.sigma * np.sqrt(self.t2exp))
-        except Exception as e:
+        else:
             self.d1 = None
             self.d2 = None
 
@@ -33,7 +33,7 @@ class Option(Params):
     def update_params(self, typeflag=None, strike=None, underlying=None, sigma=None, price=None, t2exp=None, rf=None, renew=False):
         update = {
             'Typeflag': self.typeflag if typeflag is None else typeflag,
-            'Strike': self.strike if strike is None else strike,
+            'Stirke': self.strike if strike is None else strike,
             'Underlying': self.underlying if underlying is None else underlying,
             'T2exp': self.t2exp if t2exp is None else t2exp,
             'Sigma': self.sigma if sigma is None else sigma,
@@ -55,7 +55,6 @@ class Option(Params):
 class BSMoption(Option):
     def get_price(self, typeflag=None, strike=None, underlying=None, sigma=None, price=None, t2exp=None, rf=None):
         params = self.update_params(typeflag, strike, underlying, sigma, price, t2exp, rf)
-        
         if params.typeflag == "c":
             cdf_d1 = params.underlying * np.exp(-params.rf * params.t2exp) * stats.norm.cdf(params.d1)
             cdf_d2 = params.strike * np.exp(-params.rf * params.t2exp) * stats.norm.cdf(params.d2)
@@ -156,7 +155,7 @@ class BSMoption(Option):
 if __name__ == "__main__":
     test = {
         'Typeflag': 'c',
-        'Strike': 40000,
+        'Stirke': 40000,
         'Underlying': 38533,
         'T2exp': 7.5/365,
         'Sigma': 0.744,
@@ -164,7 +163,7 @@ if __name__ == "__main__":
         'Rf': 0, }
     params = Params(test)
     option = BSMoption(test)
-    print(option.price, option.sigma, option.strike)
+    print(option.price, option.sigma)
     # option.update_params(underlying=1, renew=True)
     price = option.get_price()
     iv = option.get_volatility()

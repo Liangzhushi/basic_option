@@ -21,8 +21,12 @@ class Params:
         self.sigma = params['Sigma']
         self.price = params['Price']
         self.rf = params['Rf']
-        self.d1 = (np.log(self.underlying / self.strike) + (self.rf + np.sqrt(self.sigma) / 2) * self.t2exp) / (self.sigma * np.sqrt(self.t2exp))
-        self.d2 = (np.log(self.underlying / self.strike) + (self.rf - np.sqrt(self.sigma) / 2) * self.t2exp) / (self.sigma * np.sqrt(self.t2exp))
+        if self.sigma is not None:
+            self.d1 = (np.log(self.underlying / self.strike) + (self.rf + pow(self.sigma, 2) / 2) * self.t2exp) / (self.sigma * np.sqrt(self.t2exp))
+            self.d2 = (np.log(self.underlying / self.strike) + (self.rf - pow(self.sigma, 2) / 2) * self.t2exp) / (self.sigma * np.sqrt(self.t2exp))
+        else:
+            self.d1 = None
+            self.d2 = None
 
 
 class Option(Params):
@@ -35,7 +39,6 @@ class Option(Params):
             'Sigma': self.sigma if sigma is None else sigma,
             'Price': self.price if price is None else price,
             'Rf': self.rf if rf is None else rf}
-
         if renew is True:
             self.__init__(update)
         return Params(update)
@@ -129,13 +132,13 @@ class BSMoption(Option):
             print('This typeflag is wrong')
         return cofc
 
-    def get_volatility(self, typeflag=None, strike=None, underlying=None, sigma=None, price=None, t2exp=None, rf=None, integral=False):
+    def get_volatility(self, typeflag=None, strike=None, underlying=None, sigma=None, price=None, t2exp=None, rf=None, integral=True):
         params = self.update_params(typeflag, strike, underlying, sigma, price, t2exp, rf)
         set_sigma, top, floor = 5, 100, 0
-        for i in range(100):
+        for i in range(10000):
             bsm_price = self.get_price(params.typeflag, params.strike, params.underlying, set_sigma, params.price, params.t2exp, params.rf)
-            diff = bsm_price - params.price
-            if abs(diff) < 0.0001:
+            diff = params.price - bsm_price
+            if abs(diff) < 0.00001:
                 return set_sigma
             if integral is False:
                 if diff > 0:
@@ -145,15 +148,24 @@ class BSMoption(Option):
                 set_sigma = (top + floor) / 2
             elif integral is True:
                 vega = self.get_vega(params.typeflag, params.strike, params.underlying, set_sigma, params.price, params.t2exp, params.rf)
-                set_sigma = set_sigma + diff / vega / 5
+                set_sigma = set_sigma + diff / vega
         return set_sigma
 
 
 if __name__ == "__main__":
-    params = Params()
-    option = BSMoption()
-    print(option.typeflag)
-    option.update_params(underlying=1, renew=True)
+    test = {
+        'Typeflag': 'c',
+        'Stirke': 40000,
+        'Underlying': 38533,
+        'T2exp': 7.5/365,
+        'Sigma': 0.744,
+        'Price': 1043,
+        'Rf': 0, }
+    params = Params(test)
+    option = BSMoption(test)
+    print(option.t2exp)
+    print(option.price, option.sigma)
+    # option.update_params(underlying=1, renew=True)
     price = option.get_price()
-    iv = option.get_volatility(price=price)
+    iv = option.get_volatility()
     print(price, iv)
